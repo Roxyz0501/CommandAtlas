@@ -13,6 +13,12 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
+      },
+      "GTranslate": {
+        "type": "Direct",
+        "requested": "[2.4.0, )",
+        "resolved": "2.4.0",
+        "contentHash": "p42hUtyjYHoqclGNxE+2Q5g5UOuTqAS7/ojF8xyrawyRmGRXlqQbzN6SO2hBaQ2i+eGHfNN+YwHs3Mnm1aV0+A=="
       }
     }
   }

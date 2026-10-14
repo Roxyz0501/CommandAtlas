@@ -1,4 +1,6 @@
 Command Atlas — Copyright (c) 2026 Roxyz0501.
+Includes GTranslate 2.4.0 by d4n3436 (https://github.com/d4n3436/GTranslate), MIT License.
+See GTranslate-LICENSE.txt. Only the optional Google Japanese translation feature uses this library.
 Uses goatcorp/Dalamud (https://github.com/goatcorp/Dalamud), LGPL-3.0-or-later,
 through its public plugin, command, texture and font APIs. Dalamud is provided by the host.
 StandardPluginTabs.cs is copied from the Roxyz0501 workspace canonical template.

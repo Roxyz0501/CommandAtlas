@@ -1,3 +1,18 @@
+# Verification — 1.1.0.0 — 2026-10-14 JST
+
+- Clean Release succeeded with zero warnings/errors. ZIP SHA-256: `7D2E4012EAA079CB886C7CD3AF42E1F45A23FC4D401BB0BA5890A592A523B1A6`.
+- 353 catalog/localization, 7 icon-cache, 19 new feature/cache checks and 4,820 isolated ImGui/glyph/lifecycle/access checks passed.
+- The actual rendered Run/Copy buttons were clicked: copy executes nothing, a valid subcommand executes exactly once, and placeholder arguments disable execution. Disabled plugins are excluded. Browsing causes zero extra registry reads/config writes; explicit execution adds one current command-registry lookup to revalidate ownership.
+- GTranslate 2.4.0 GoogleTranslator2 live test translated two generic English descriptions into Japanese in one API-key-free batch (20 feature checks including live). The older GoogleTranslator endpoint returned 429 during research; production uses GoogleTranslator2 only. Availability is not guaranteed by this test.
+- Translation mock measurements: 100 duplicate lookups and two distinct descriptions yield one batch request; repeated view and a new cache instance yield zero translation requests; off/hidden/cleared queue yields zero new requests; 100 retries during failure backoff yield one failed request total. No business DB exists.
+- Translation limits: visible descriptions only; up to 8 descriptions / 3,500 source characters per batch, one worker, minimum 2 seconds between successful batches; 5-minute failure backoff. Individual source 2,000 characters, queue 64; response buffer 1 MiB. Markers are validated before applying any batch. Network is cancelled when inactive.
+- Translation cache: schema/provider-specific hash of source, translated text and expiry; no source text persisted. TTL 90 days, 512 entries, 400,000 translated UTF-16 characters, load cap 4 MiB. One atomic cache replacement per successful batch; browsing warm data writes nothing. Changed source invalidates by hash. Storage/network failures fall back to memory/original text. No credentials/cookies sent.
+- GTranslate DLL and complete MIT license are included. Manual descriptions, plugin names and executable command text are not sent for translation. UI translation defaults off and survives config migration.
+- Subcommands come only from explicit matching-root help examples or user presets (maximum 256). No complete arbitrary-plugin subcommand discovery is claimed.
+- Japanese/German production-render snapshots visually inspected in `artifacts/ui-v1.1`. Tests use stubs and isolated ImGui; actual game integration, clipboard/IME/scaling and host font-atlas lifecycle remain unverified.
+
+## Historical verification for 1.0.0.0
+
 # Verification — 2026-10-14 JST
 
 ## Build and package
@@ -53,3 +68,7 @@ No secret/authenticated data is cached; requests send no cookies or credentials 
 - https://dalamud.dev/api/Dalamud.Plugin.Services/Interfaces/ICommandManager/
 - https://dalamud.dev/api/Dalamud.Plugin/Interfaces/IExposedPlugin/
 - DIP17 icon-address behavior: goatcorp/Dalamud `PluginImageCache.cs`, source blob `dca38e3e090559a9d1c4fb60ac6a810d72d8e26c`, inspected through the GitHub connector. Only the address convention was referenced, not its implementation.
+
+## 1.1.0.0 dependency audit
+
+NuGet vulnerability query including transitive packages succeeded on 2026-10-14 and reported no known vulnerable packages. This supersedes the historical 1.0.0.0 feed limitation above.

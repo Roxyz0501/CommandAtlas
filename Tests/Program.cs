@@ -4,12 +4,12 @@ using Dalamud.Game;
 var checks = 0;
 void Check(bool value, string label) { checks++; if (!value) throw new Exception(label); }
 PluginRow[] rows = [new("Alpha", "Alpha Plugin", "Inventory tools", "", true, [new("/alpha", "Open inventory", false), new("/secret", "Debug", true)]), new("Beta", "Beta", "Travel", "", false, [])];
-Check(Catalog.Filter(rows, "", false).Length == 2, "Installed unloaded plugin retained");
+Check(Catalog.Filter(rows, "", false).Length == 1, "Stopped plugins hidden");
 Check(Catalog.Filter(rows, "INVENTORY", false)[0].Commands.Length == 1, "Description and case-insensitive search");
 Check(Catalog.Filter(rows, "/alpha", false).Single().Commands.Single().Command == "/alpha", "Command search");
 Check(Catalog.Filter(rows, "Debug", false).Length == 0, "Hidden commands excluded");
 Check(Catalog.Filter(rows, "Debug", true).Single().Commands.Single().Command == "/secret", "Hidden commands opt-in");
-Check(Catalog.Filter(rows, "  travel  ", false).Single().Plugin.Loaded == false, "Whitespace search and stopped plugin");
+Check(Catalog.Filter(rows, "  travel  ", false).Length == 0, "Stopped plugins hidden from search");
 Check(Catalog.Filter(rows, "missing", false).Length == 0, "Empty results");
 Check(Loc.Resolve("de", ClientLanguage.Japanese, "fr") == "de", "Saved selection wins");
 Check(Loc.Resolve(null, ClientLanguage.Japanese, "fr") == "ja", "Game wins");
@@ -25,3 +25,4 @@ foreach (var code in Loc.Codes)
 }
 Console.WriteLine($"Passed {checks} catalog and localization checks.");
 await CacheChecks.Run();
+await FeatureChecks.Run(args.Contains("--live-translation"));

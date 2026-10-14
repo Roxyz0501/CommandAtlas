@@ -21,6 +21,13 @@ public sealed class Plugin : IDalamudPlugin
     private string fontText = "";
     private readonly IconCache icons;
     private readonly CommandInfo entry;
+    private readonly GoogleJapanese google;
+    private readonly TranslationCache translations;
+    private int translationRevision = -1;
+    private readonly Dictionary<string, string> drafts = [];
+    private (string PluginId, string Text)? requestedExecution;
+    private string status = "", customCommand = "", customHelp = "";
+    private string? addingTo;
     private PluginRow[] rows = [];
     private (PluginRow Plugin, CommandRow[] Commands)[] filtered = [];
     private volatile bool dirty = true;
@@ -35,12 +42,15 @@ public sealed class Plugin : IDalamudPlugin
         this.pi = pi; this.commands = commands; this.textures = textures; this.log = log;
         this.textureUpdates = textureUpdates;
         config = pi.GetPluginConfig() as Configuration ?? new Configuration();
+        config.Presets ??= [];
         ClientLanguage? game;
         try { game = client.ClientLanguage; } catch { game = null; }
         var language = Loc.Resolve(config.Language, game, pi.UiLanguage);
         if (config.Language != language) { config.Language = language; pi.SavePluginConfig(config); }
         fonts = new LocalizedFonts(pi.UiBuilder.FontAtlas, []);
         icons = new IconCache(Path.Combine(pi.GetPluginConfigDirectory(), "icon-cache-v1"));
+        google = new GoogleJapanese();
+        translations = new TranslationCache(Path.Combine(pi.GetPluginConfigDirectory(), "translations-google-ja-v1.json"), google.Translate);
         entry = new CommandInfo((_, _) => Open()) { HelpMessage = T("CommandHelp") };
         if (!commands.AddHandler("/commandatlas", entry)) throw new InvalidOperationException("Command /commandatlas is already registered.");
         pi.ActivePluginsChanged += PluginsChanged;
@@ -51,7 +61,7 @@ public sealed class Plugin : IDalamudPlugin
     private string T(string key) => Loc.Get(config.Language, key);
     private void Open() => open = true;
     private void PluginsChanged(IActivePluginsChangedEventArgs _) => dirty = true;
-    private void Filter() { filtered = Catalog.Filter(rows, search, config.ShowHidden); page = 0; }
+    private void Filter() { filtered = Catalog.Filter(rows, search, config.ShowHidden, config.JapaneseDescriptions ? text => translations.Get(text, false) : null); page = 0; }
     private void Reload()
     {
         dirty = false;
@@ -73,19 +83,26 @@ public sealed class Plugin : IDalamudPlugin
             }
             var result = installed.Select(p => new PluginRow(p.InternalName, p.Name, p.Manifest.Description ?? "",
                 IconUrl(p), p.IsLoaded,
-                groups.Remove(p.InternalName, out var list) ? list.OrderBy(c => c.Command, StringComparer.Ordinal).ToArray() : [])).ToList();
+                CommandCatalog.Expand(groups.Remove(p.InternalName, out var list) ? list.OrderBy(c => c.Command, StringComparer.Ordinal).ToArray() : [], p.InternalName, config.Presets))).Where(p => p.Loaded).ToList();
             var remaining = groups.Values.SelectMany(x => x).OrderBy(x => x.Command, StringComparer.Ordinal).ToArray();
-            if (remaining.Length > 0) result.Add(new("", T("Other"), T("OtherHelp"), "", true, remaining));
+            if (remaining.Length > 0) result.Add(new("", T("Other"), T("OtherHelp"), "", true, CommandCatalog.Expand(remaining, "", config.Presets)));
             rows = result.ToArray();
-            var nextText = string.Concat(rows.SelectMany(p => new[] { p.Name, p.Description }.Concat(p.Commands.SelectMany(c => new[] { c.Command, c.Help }))));
+            var validKeys = rows.SelectMany(p => p.Commands.Select(c => p.Id + "\n" + c.Command)).ToHashSet();
+            foreach (var key in drafts.Keys.Where(k => !validKeys.Contains(k)).ToArray()) drafts.Remove(key);
+            RefreshFonts();
+            Filter(); failed = false;
+        }
+        catch (Exception ex) { failed = true; rows = []; Filter(); log.Error(ex, "Could not read command catalog."); }
+    }
+    private void RefreshFonts()
+    {
+            var nextText = string.Concat(rows.SelectMany(p => new[] { p.Name, p.Description }.Concat(p.Commands.SelectMany(c => new[] { c.Command, c.Help })))) + translations.FontText;
             if (nextText != fontText)
             {
                 var replacement = new LocalizedFonts(pi.UiBuilder.FontAtlas, [nextText]);
                 fonts.Dispose(); fonts = replacement; fontText = nextText;
             }
-            Filter(); failed = false;
-        }
-        catch (Exception ex) { failed = true; rows = []; Filter(); log.Error(ex, "Could not read command catalog."); }
+            translationRevision = translations.Revision;
     }
     private static string IconUrl(IExposedPlugin plugin)
     {
@@ -96,9 +113,17 @@ public sealed class Plugin : IDalamudPlugin
     }
     private void Draw()
     {
-        if (!open) return;
+        if (!open) { translations.SetActive(false); return; }
         while (icons.TryTakeChanged(out var path)) textureUpdates.InvalidatePaths([path]);
         if (dirty) Reload();
+        if (translationRevision != translations.Revision) { RefreshFonts(); var previous = page; Filter(); page = Math.Min(previous, Math.Max(0, (filtered.Length - 1) / PageSize)); }
+        DrawWindow();
+        // Dispatch only after every ImGui scope and font scope has closed.
+        if (requestedExecution is { } request) { requestedExecution = null; Execute(request.PluginId, request.Text); }
+    }
+    private void DrawWindow()
+    {
+        var catalogVisible = false;
         using var font = fonts.Push(config.Language);
         ImGui.SetNextWindowSize(new Vector2(800, 650), ImGuiCond.FirstUseEver);
         ImGui.SetNextWindowSizeConstraints(new Vector2(460, 330), new Vector2(float.MaxValue));
@@ -106,23 +131,27 @@ public sealed class Plugin : IDalamudPlugin
         {
             if (ImGui.BeginTabBar("Tabs"))
             {
-                if (ImGui.BeginTabItem(T("Commands") + "###Commands")) { DrawCatalog(); ImGui.EndTabItem(); }
+                if (ImGui.BeginTabItem(T("Commands") + "###Commands")) { catalogVisible = true; translations.SetActive(config.JapaneseDescriptions); DrawCatalog(); ImGui.EndTabItem(); }
                 StandardPluginTabs.DrawStandardTrailingTabs(T("Settings"), "Settings", DrawSettings, T("Language"), DrawLanguage,
                     T("Support"), () => StandardPluginTabs.DrawSupportContent(T("SupportHeading"), T("SupportBody"), T("Recipient"), T("SupportButton")));
                 ImGui.EndTabBar();
             }
         }
         ImGui.End();
+        translations.SetActive(open && catalogVisible && config.JapaneseDescriptions);
+        translations.Pump();
     }
     private void DrawCatalog()
     {
+        translations.BeginFrame();
         ImGui.SetNextItemWidth(Math.Max(180, ImGui.GetContentRegionAvail().X - 120));
         if (ImGui.InputTextWithHint("###Search", T("Search"), ref search, 256)) Filter();
         ImGui.SameLine();
         if (ImGui.Button(T("Refresh") + "###Refresh")) Reload();
         ImGui.TextWrapped(T("Info"));
+        DrawTranslationToggle();
         if (failed) ImGui.TextWrapped(T("Error"));
-        if (DateTime.UtcNow < copiedUntil) ImGui.TextColored(new Vector4(.4f, .9f, .65f, 1), T("Copied") + ": " + copied);
+        if (DateTime.UtcNow < copiedUntil) ImGui.TextColored(new Vector4(.4f, .9f, .65f, 1), T(status) + ": " + copied);
         var pages = Math.Max(1, (filtered.Length + PageSize - 1) / PageSize);
         ImGui.BeginDisabled(page == 0);
         if (ImGui.Button(T("Previous") + "###Previous")) page--;
@@ -150,22 +179,23 @@ public sealed class Plugin : IDalamudPlugin
                 ImGui.BeginGroup();
                 if (search.Length > 0) ImGui.SetNextItemOpen(true, ImGuiCond.Always);
                 var expanded = ImGui.TreeNodeEx(plugin.Name.Replace("#", "＃") + $"  ({list.Length})###Plugin", ImGuiTreeNodeFlags.SpanAvailWidth);
-                ImGui.TextWrapped(string.IsNullOrWhiteSpace(plugin.Description) ? T("NoHelp") : plugin.Description);
+                DrawDescription(plugin.Description);
                 if (!plugin.Loaded) ImGui.TextDisabled(T("Disabled"));
                 if (expanded)
                 {
                     if (list.Length == 0) ImGui.TextWrapped(T("NoCommands"));
-                    foreach (var command in list)
+                    if (ImGui.BeginTable("CommandList", 2, ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.SizingStretchProp))
                     {
-                        ImGui.PushID(command.Command);
-                        if (ImGui.Button(command.Command + "###Copy"))
+                        ImGui.TableSetupColumn(T("Commands"), ImGuiTableColumnFlags.WidthStretch);
+                        ImGui.TableSetupColumn(T("Actions"), ImGuiTableColumnFlags.WidthFixed, Math.Max(150, ImGui.CalcTextSize(T("Run") + T("Copy")).X + 40));
+                        ImGui.TableHeadersRow();
+                        foreach (var command in list)
                         {
-                            ImGui.SetClipboardText(command.Command); copied = command.Command; copiedUntil = DateTime.UtcNow.AddSeconds(3);
+                            DrawCommand(plugin, command);
                         }
-                        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("Copy"));
-                        ImGui.TextWrapped(string.IsNullOrWhiteSpace(command.Help) ? T("NoHelp") : command.Help);
-                        ImGui.Spacing(); ImGui.PopID();
+                        ImGui.EndTable();
                     }
+                    DrawAddCommand(plugin);
                     ImGui.TreePop();
                 }
                 ImGui.EndGroup(); ImGui.Separator(); ImGui.PopID();
@@ -173,11 +203,85 @@ public sealed class Plugin : IDalamudPlugin
         }
         ImGui.EndChild();
     }
+    private void DrawTranslationToggle()
+    {
+        var enabled = config.JapaneseDescriptions;
+        if (ImGui.Checkbox(T("JapaneseDescriptions") + "###Translate", ref enabled))
+        {
+            config.JapaneseDescriptions = enabled; pi.SavePluginConfig(config); translations.SetActive(enabled); Filter();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("TranslationInfo"));
+        if (enabled) { ImGui.SameLine(); ImGui.TextDisabled(T(translations.Status)); }
+    }
+    private void DrawDescription(string text, bool external = true)
+    {
+        var display = config.JapaneseDescriptions && external ? translations.Get(text, ImGui.IsRectVisible(new Vector2(1, ImGui.GetTextLineHeight()))) : text;
+        ImGui.TextWrapped(string.IsNullOrWhiteSpace(display) ? T("NoHelp") : display);
+        if (display != text && ImGui.IsItemHovered()) { ImGui.BeginTooltip(); ImGui.PushTextWrapPos(500); ImGui.TextUnformatted(text); ImGui.PopTextWrapPos(); ImGui.EndTooltip(); }
+    }
+    private void DrawCommand(PluginRow plugin, CommandRow command)
+    {
+        ImGui.PushID(command.Command);
+        ImGui.TableNextRow(); ImGui.TableNextColumn();
+        var key = plugin.Id + "\n" + command.Command;
+        var text = drafts.GetValueOrDefault(key, command.Command);
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputText("###CommandText", ref text, 1024)) drafts[key] = text;
+        if (command.Origin != "Registered") ImGui.TextDisabled(T(command.Origin));
+        DrawDescription(command.Help, command.Origin != "Manual");
+        ImGui.TableNextColumn();
+        var validRoot = CommandCatalog.Root(text) == CommandCatalog.Root(command.Command);
+        ImGui.BeginDisabled(!validRoot || !CommandCatalog.Executable(text));
+        if (ImGui.Button(T("Run") + "###Run")) requestedExecution = (plugin.Id, text.Trim());
+        ImGui.EndDisabled(); ImGui.SameLine();
+        if (ImGui.Button(T("Copy") + "###Copy")) { ImGui.SetClipboardText(text); Feedback("Copied", text); }
+        if (!validRoot || !CommandCatalog.Executable(text)) ImGui.TextWrapped(T("FillArguments"));
+        if (command.PresetId != null && ImGui.SmallButton(T("Remove") + "###Remove"))
+        {
+            config.Presets.RemoveAll(p => p.Id == command.PresetId); pi.SavePluginConfig(config); dirty = true;
+        }
+        ImGui.PopID();
+    }
+    private void Feedback(string key, string text) { status = key; copied = text; copiedUntil = DateTime.UtcNow.AddSeconds(4); }
+    private bool Execute(string pluginId, string text)
+    {
+        try
+        {
+            if (!CommandCatalog.Executable(text) || !commands.Commands.TryGetValue(CommandCatalog.Root(text), out var current)) throw new InvalidOperationException("Command unavailable");
+            var owner = pi.GetPlugin(current.Handler.Method.Module.Assembly);
+            if ((owner?.InternalName ?? "") != pluginId || (owner != null && !owner.IsLoaded)) throw new InvalidOperationException("Owner changed or unloaded");
+            if (!commands.ProcessCommand(text)) throw new InvalidOperationException("Dispatch rejected");
+            Feedback("Executed", text); return true;
+        }
+        catch (Exception ex) { log.Warning(ex, "Could not execute selected command"); Feedback("ExecutionFailed", text); dirty = true; return false; }
+    }
+    private void DrawAddCommand(PluginRow plugin)
+    {
+        if (ImGui.SmallButton(T("AddSubcommand") + "###Add")) { addingTo = plugin.Id; customCommand = plugin.Commands.FirstOrDefault()?.Command.Split(' ')[0] + " "; customHelp = ""; }
+        if (addingTo != plugin.Id) return;
+        ImGui.TextWrapped(T("SubcommandInfo"));
+        ImGui.SetNextItemWidth(-1); ImGui.InputTextWithHint("###CustomCommand", T("CommandText"), ref customCommand, 1024);
+        ImGui.SetNextItemWidth(-1); ImGui.InputTextWithHint("###CustomHelp", T("Description"), ref customHelp, 2048);
+        if (ImGui.Button(T("Save") + "###Save"))
+        {
+            var text = customCommand.Trim();
+            if (config.Presets.Count >= 256 || !CommandCatalog.ValidText(text) || !plugin.Commands.Any(c => c.Origin == "Registered" && c.Command == CommandCatalog.Root(text)) || plugin.Commands.Any(c => c.Command == text))
+                Feedback("InvalidPreset", text);
+            else
+            {
+                config.Presets.Add(new() { PluginId = plugin.Id, Command = text, Help = customHelp.Trim() });
+                pi.SavePluginConfig(config); addingTo = null; dirty = true;
+            }
+        }
+        ImGui.SameLine(); if (ImGui.Button(T("Cancel") + "###Cancel")) addingTo = null;
+    }
     private void DrawSettings()
     {
         var hidden = config.ShowHidden;
         if (ImGui.Checkbox(T("Hidden") + "###Hidden", ref hidden)) { config.ShowHidden = hidden; pi.SavePluginConfig(config); Filter(); }
         ImGui.TextWrapped(T("CacheInfo"));
+        ImGui.TextWrapped(T("TranslationInfo"));
+        ImGui.TextWrapped(T("SubcommandInfo"));
     }
     private void DrawLanguage()
     {
@@ -185,13 +289,14 @@ public sealed class Plugin : IDalamudPlugin
         if (selected != null && selected != config.Language)
         {
             config.Language = selected; pi.SavePluginConfig(config); entry.HelpMessage = T("CommandHelp");
-            rows = rows.Select(p => p.Id.Length == 0 ? p with { Name = T("Other"), Description = T("OtherHelp") } : p).ToArray(); Filter();
+            rows = rows.Select(p => p.Id.Length == 0 ? p with { Name = T("Other"), Description = T("OtherHelp") }
+                : p.Id == "CommandAtlas" ? p with { Commands = p.Commands.Select(c => c.Command == "/commandatlas" ? c with { Help = entry.HelpMessage } : c).ToArray() } : p).ToArray(); Filter();
         }
     }
     public void Dispose()
     {
         pi.ActivePluginsChanged -= PluginsChanged; pi.UiBuilder.Draw -= Draw;
         pi.UiBuilder.OpenMainUi -= Open; pi.UiBuilder.OpenConfigUi -= Open;
-        commands.RemoveHandler("/commandatlas"); icons.Dispose(); fonts.Dispose();
+        commands.RemoveHandler("/commandatlas"); translations.Dispose(); google.Dispose(); icons.Dispose(); fonts.Dispose();
     }
 }

@@ -5,6 +5,11 @@
     <Compile Include="../CommandAtlas/Catalog.cs" Link="Catalog.cs" />
     <Compile Include="../CommandAtlas/Loc.cs" Link="Loc.cs" />
     <Compile Include="../CommandAtlas/IconCache.cs" Link="IconCache.cs" />
+    <Compile Include="../CommandAtlas/Configuration.cs" Link="Configuration.cs" />
+    <Compile Include="../CommandAtlas/CommandCatalog.cs" Link="CommandCatalog.cs" />
+    <Compile Include="../CommandAtlas/TranslationCache.cs" Link="TranslationCache.cs" />
+    <Compile Include="../CommandAtlas/GoogleJapanese.cs" Link="GoogleJapanese.cs" />
+    <PackageReference Include="GTranslate" Version="2.4.0" />
     <EmbeddedResource Include="../CommandAtlas/Locales.json" LogicalName="CommandAtlas.Locales.json" />
     <Reference Include="Dalamud" HintPath="$(appdata)/XIVLauncher/addon/Hooks/dev/Dalamud.dll" />
   </ItemGroup>

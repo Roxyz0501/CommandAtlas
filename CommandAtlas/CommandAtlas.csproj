@@ -10,7 +10,7 @@
     <AssemblyName>CommandAtlas</AssemblyName>
     <Authors>Roxyz0501</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Version>1.0.0.0</Version>
+    <Version>1.1.0.0</Version>
     <RepoUrl>https://github.com/Roxyz0501/CommandAtlas</RepoUrl>
     <IconUrl>https://raw.githubusercontent.com/Roxyz0501/CommandAtlas/main/CommandAtlas/images/icon.png</IconUrl>
     <Deterministic>true</Deterministic>
@@ -34,6 +34,10 @@
     <None Include="images\icon.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="NOTICE" CopyToOutputDirectory="PreserveNewest" />
     <None Include="LICENSE" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="GTranslate-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="GTranslate" Version="2.4.0" />
   </ItemGroup>
 </Project>
 

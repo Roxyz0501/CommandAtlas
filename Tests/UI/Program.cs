@@ -26,6 +26,9 @@ unsafe class Program
             var type = typeof(Plugin);
             object? Invoke(string method) => type.GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(plugin, null);
             Invoke("Reload"); // Build fonts outside the native frame, as the host's managed atlas does.
+            var visibleRows = (Array)type.GetField("filtered", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(plugin)!;
+            Check(visibleRows.Length == 2, "Stopped plugin excluded");
+            type.GetField("search", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(plugin, "/example"); Invoke("Filter");
             io.Fonts.Build();
             var loc = type.Assembly.GetType("CommandAtlas.Loc")!;
             var text = (string)loc.GetProperty("FontText")!.GetValue(null)!;
@@ -41,7 +44,6 @@ unsafe class Program
             void Click(float x, float y) { io.AddMousePosEvent(x, y); Frame(); io.AddMouseButtonEvent(0, true); Frame(); io.AddMouseButtonEvent(0, false); Frame(); Frame(); }
             Dummy.Commands["/commandatlas"].Handler("/commandatlas", "");
             Frame(); Frame();
-            Click(145, 204); // Expand the first plugin card.
             foreach (var code in new[] { "ja", "en", "de", "fr", "ko", "zh-Hans", "zh-Hant" })
             {
                 Dummy.Config.Language = code;
@@ -51,8 +53,15 @@ unsafe class Program
             }
             Check(Dummy.CatalogReads == 1 && Dummy.CommandReads == 1, "Unchanged rendering has no catalog reads");
             Dummy.Config.Language = "ja"; Frame(); Frame();
-            Click(145, 309); Click(180, 357);
-            Check(clipboard == "/example", "One click copies the command without dispatching its handler or using the OS clipboard");
+            Click(765, 303);
+            Check(clipboard == "/example" && Dummy.Executions == 0, "Copy button copies without executing");
+            type.GetField("copiedUntil", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(plugin, DateTime.MinValue); Frame(); Frame();
+            Click(718, 368);
+            Check(Dummy.Executions == 1 && Dummy.Executed == "/example stop", "Run button executes subcommand once after drawing");
+            type.GetField("copiedUntil", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(plugin, DateTime.MinValue); Frame(); Frame();
+            Click(718, 437);
+            Check(Dummy.Executions == 1, "Run button disabled for incomplete argument template");
+            Check(Dummy.CommandReads == 2, "One execution adds exactly one registry read");
             Renderer.Render(ImGui.GetDrawData(), textures, Path.Combine(output, "copy-ja.bmp"));
             var saves = Dummy.SaveCount;
             Dummy.Config.Language = "en"; Frame(); Frame();
@@ -61,8 +70,13 @@ unsafe class Program
             Check(Dummy.SaveCount == saves, "Tab navigation has no saves");
             // Filtering reads the snapshot only, without reading Dalamud again.
             type.GetField("search", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(plugin, "/example"); Invoke("Filter");
-            Check(Dummy.CatalogReads == 1 && Dummy.CommandReads == 1, "Search reads snapshot only");
+            Check(Dummy.CatalogReads == 1 && Dummy.CommandReads == 2, "Search reads snapshot only");
             Check(Dummy.SaveCount == saves, "Search has no writes");
+            var execute = type.GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            Check((bool)execute.Invoke(plugin, ["ExampleTools", "/example stop"])! && Dummy.Executed == "/example stop", "Dispatches exact command with arguments");
+            var count = Dummy.Executions;
+            Check(!(bool)execute.Invoke(plugin, ["ExampleTools", "/example <name>"])! && Dummy.Executions == count, "Placeholder execution rejected");
+            Check(!(bool)execute.Invoke(plugin, ["WrongOwner", "/example"])! && Dummy.Executions == count, "Changed command owner rejected");
         }
         Check(Dummy.Commands.Count == 1 && Dummy.Commands.ContainsKey("/example"), "Dispose removes only own command");
         ImGui.DestroyContext(); foreach (var pin in Dummy.Pins) pin.Free();
@@ -75,7 +89,9 @@ public unsafe class Dummy : DispatchProxy
     public static Configuration Config = new() { Language = "ja" };
     public static string CacheDirectory = "";
     public static int SaveCount, CatalogReads, CommandReads;
-    public static Dictionary<string, IReadOnlyCommandInfo> Commands = new() { ["/example"] = new CommandInfo((_, _) => throw new Exception("Must not execute commands")) { HelpMessage = "Example command help / コマンドの説明" } };
+    public static string Executed = "";
+    public static int Executions;
+    public static Dictionary<string, IReadOnlyCommandInfo> Commands = new() { ["/example"] = new CommandInfo((command, args) => { Executions++; Executed = command + (args.Length > 0 ? " " + args : ""); }) { HelpMessage = "/example stop - Stop the task\n/example start <name> - Start a task" } };
     public static List<ImFontPtr> Fonts = [];
     public static List<GCHandle> Pins = [];
     public ImFontPtr Font;
@@ -100,6 +116,7 @@ public unsafe class Dummy : DispatchProxy
             case "get_Manifest": var manifest = DispatchProxy.Create(method.ReturnType, typeof(Dummy)); ((Dummy)manifest).Id = Id; return manifest;
             case "get_Description": return Id == "CommandAtlas" ? "Browse and copy commands grouped by plugin." : "Example plugin description / プラグインの説明";
             case "get_Commands": CommandReads++; return new ReadOnlyDictionary<string, IReadOnlyCommandInfo>(Commands);
+            case "ProcessCommand": var split = ((string)args![0]!).Split(' ', 2); if (!Commands.TryGetValue(split[0], out var info)) return false; info.Handler(split[0], split.Length > 1 ? split[1] : ""); return true;
             case "SavePluginConfig": SaveCount++; return null;
             case "AddHandler": return Commands.TryAdd((string)args![0]!, (CommandInfo)args[1]!);
             case "RemoveHandler": return Commands.Remove((string)args![0]!);
