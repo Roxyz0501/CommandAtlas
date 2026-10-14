@@ -1,5 +1,17 @@
 # Command Atlas publication state
 
+## 2026-10-14 — Command Atlas 1.1.0.0 public preview
+
+- Release: https://github.com/Roxyz0501/CommandAtlas/releases/tag/v1.1.0.0
+- ZIP: https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.0/CommandAtlas-1.1.0.0.zip
+- Source/tag commit: `fc79ea7c0899425db8fa21a5b15e5a5d2dba32fb`.
+- ZIP SHA-256: `7D2E4012EAA079CB886C7CD3AF42E1F45A23FC4D401BB0BA5890A592A523B1A6`.
+- Added per-command execution/copy, editable arguments, help-derived and saved manual subcommands, disabled-plugin exclusion, and optional cached Japanese descriptions through GTranslate 2.4.0 / GoogleTranslator2. User explicitly approved sending descriptions only with translation enabled. Default is off.
+- Clean Release: zero warnings/errors; 353 catalog/localization, 7 icon-cache, 19 offline feature/cache and 4,820 isolated ImGui/glyph/lifecycle/access checks passed. Live Google batch translation succeeded (20 feature checks including live); NuGet query reported no known vulnerable dependencies.
+- Anonymous repository, PNG icon and ZIP returned HTTP 200. Downloaded ZIP matched the verified hash; eight allowlisted entries include GTranslate DLL and full MIT license. Packaged RepoUrl/IconUrl/version checked; canonical tabs unchanged.
+- Shared index commit: `8d5111005795e587f8aee7433dcfc6d071d0ea23`. Eight entries verified at anonymous commit-pinned URL; seven other entries unchanged. Normal main URL initially served cached 1.0.0.0.
+- Native game integration remains unverified and disclosed as a public preview. No installed plugin DLL was replaced. Source/index writes used the GitHub connector; CLI was used for unsupported Release publishing and Git synchronization.
+
 ## 2026-10-14 — 1.0.0.0 public preview
 
 - Explicitly published at the user's request; author Roxyz0501.
