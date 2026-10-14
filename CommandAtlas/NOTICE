@@ -1,0 +1,8 @@
+Command Atlas — Copyright (c) 2026 Roxyz0501.
+Uses goatcorp/Dalamud (https://github.com/goatcorp/Dalamud), LGPL-3.0-or-later,
+through its public plugin, command, texture and font APIs. Dalamud is provided by the host.
+StandardPluginTabs.cs is copied from the Roxyz0501 workspace canonical template.
+The localized font helper is adapted from Roxyz0501's BaitBeacon helper.
+Noto Sans CJK is provided by Dalamud under the SIL Open Font License 1.1.
+Other plugins' names, icons, descriptions and command help remain their authors' content;
+they are displayed at runtime, not bundled or claimed as Command Atlas artwork.

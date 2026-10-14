@@ -1,0 +1,18 @@
+{
+  "Status": "public preview; native game acceptance pending",
+  "InternalName": "CommandAtlas",
+  "Name": "Command Atlas",
+  "Author": "Roxyz0501",
+  "Description": "Browse installed plugin names, icons, descriptions and registered command help; copy commands with one click.",
+  "Punchline": "Find and copy commands by plugin.",
+  "Tags": ["commands", "clipboard", "utility", "search"],
+  "AssemblyVersion": "1.0.0.0",
+  "DalamudApiLevel": 15,
+  "RepoUrl": "https://github.com/Roxyz0501/CommandAtlas",
+  "IconUrl": "https://raw.githubusercontent.com/Roxyz0501/CommandAtlas/main/CommandAtlas/images/icon.png",
+  "DownloadLinkInstall": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.0.0.0/CommandAtlas-1.0.0.0.zip",
+  "DownloadLinkUpdate": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.0.0.0/CommandAtlas-1.0.0.0.zip",
+  "DownloadLinkTesting": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.0.0.0/CommandAtlas-1.0.0.0.zip",
+  "Dependencies": [],
+  "SharedRepository": "https://raw.githubusercontent.com/Roxyz0501/DalamudPluginRepo/main/repo.json"
+}

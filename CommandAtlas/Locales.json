@@ -1,0 +1,236 @@
+{
+  "Commands": [
+    "コマンド一覧",
+    "Commands",
+    "Befehle",
+    "Commandes",
+    "명령어 목록",
+    "命令列表",
+    "指令清單"
+  ],
+  "Settings": [
+    "設定",
+    "Settings",
+    "Einstellungen",
+    "Paramètres",
+    "설정",
+    "设置",
+    "設定"
+  ],
+  "Language": [
+    "言語設定",
+    "Language settings",
+    "Spracheinstellungen",
+    "Langue",
+    "언어 설정",
+    "语言设置",
+    "語言設定"
+  ],
+  "Support": [
+    "支援",
+    "Support",
+    "Unterstützung",
+    "Soutien",
+    "후원",
+    "支持",
+    "支持"
+  ],
+  "LanguageHelp": [
+    "表示言語を選択します。変更はすぐに保存されます。",
+    "Choose the display language. Changes are saved immediately.",
+    "Anzeigesprache auswählen. Änderungen werden sofort gespeichert.",
+    "Choisissez la langue. Les modifications sont enregistrées immédiatement.",
+    "표시 언어를 선택하세요. 변경 사항은 즉시 저장됩니다.",
+    "选择显示语言。更改会立即保存。",
+    "選擇顯示語言。變更會立即儲存。"
+  ],
+  "SupportHeading": [
+    "開発を支援",
+    "Support development",
+    "Entwicklung unterstützen",
+    "Soutenir le développement",
+    "개발 후원",
+    "支持开发",
+    "支持開發"
+  ],
+  "SupportBody": [
+    "支援は任意です。すべての機能を無料で利用できます。",
+    "Support is optional. All features are free.",
+    "Unterstützung ist freiwillig. Alle Funktionen sind kostenlos.",
+    "Le soutien est facultatif. Toutes les fonctions sont gratuites.",
+    "후원은 선택 사항입니다. 모든 기능은 무료입니다.",
+    "支持完全自愿。所有功能均免费。",
+    "支持完全自願。所有功能均免費。"
+  ],
+  "Recipient": [
+    "支援先: Roxyz0501",
+    "Recipient: Roxyz0501",
+    "Empfänger: Roxyz0501",
+    "Bénéficiaire : Roxyz0501",
+    "후원 대상: Roxyz0501",
+    "支持对象：Roxyz0501",
+    "支持對象：Roxyz0501"
+  ],
+  "SupportButton": [
+    "Ko-fiで支援する",
+    "Support on Ko-fi",
+    "Auf Ko-fi unterstützen",
+    "Soutenir sur Ko-fi",
+    "Ko-fi에서 후원",
+    "在 Ko-fi 上支持",
+    "在 Ko-fi 上支持"
+  ],
+  "Search": [
+    "名前・説明・コマンドを検索",
+    "Search names, descriptions and commands",
+    "Namen, Beschreibungen und Befehle suchen",
+    "Rechercher noms, descriptions et commandes",
+    "이름, 설명, 명령어 검색",
+    "搜索名称、说明和命令",
+    "搜尋名稱、說明和指令"
+  ],
+  "Refresh": [
+    "再取得",
+    "Refresh",
+    "Aktualisieren",
+    "Actualiser",
+    "새로 고침",
+    "刷新",
+    "重新整理"
+  ],
+  "Copy": [
+    "コピー",
+    "Copy",
+    "Kopieren",
+    "Copier",
+    "복사",
+    "复制",
+    "複製"
+  ],
+  "Copied": [
+    "コピーしました",
+    "Copied",
+    "Kopiert",
+    "Copié",
+    "복사됨",
+    "已复制",
+    "已複製"
+  ],
+  "NoHelp": [
+    "説明は登録されていません。",
+    "No description was provided.",
+    "Keine Beschreibung hinterlegt.",
+    "Aucune description fournie.",
+    "등록된 설명이 없습니다.",
+    "未提供说明。",
+    "未提供說明。"
+  ],
+  "NoCommands": [
+    "取得できるコマンドはありません。",
+    "No commands are available.",
+    "Keine Befehle verfügbar.",
+    "Aucune commande disponible.",
+    "사용 가능한 명령어가 없습니다.",
+    "没有可用命令。",
+    "沒有可用指令。"
+  ],
+  "Disabled": [
+    "停止中：コマンドは取得できません。",
+    "Not loaded: commands are unavailable.",
+    "Nicht geladen: Befehle nicht verfügbar.",
+    "Non chargé : commandes indisponibles.",
+    "로드되지 않음: 명령어를 가져올 수 없습니다.",
+    "未加载：无法获取命令。",
+    "未載入：無法取得指令。"
+  ],
+  "Other": [
+    "所属を特定できないコマンド / Dalamud",
+    "Unassigned commands / Dalamud",
+    "Nicht zugeordnete Befehle / Dalamud",
+    "Commandes non attribuées / Dalamud",
+    "소속을 확인할 수 없는 명령어 / Dalamud",
+    "无法确定归属的命令 / Dalamud",
+    "無法確定歸屬的指令 / Dalamud"
+  ],
+  "OtherHelp": [
+    "共通ライブラリ経由など、所属を確定できないコマンドです。",
+    "Commands whose owner cannot be determined, including shared-library handlers.",
+    "Befehle ohne eindeutigen Besitzer, etwa aus gemeinsamen Bibliotheken.",
+    "Commandes sans propriétaire identifiable, notamment via des bibliothèques partagées.",
+    "공유 라이브러리 등을 사용하여 소속을 확인할 수 없는 명령어입니다.",
+    "无法确定所属插件的命令，包括通过共享库注册的命令。",
+    "無法確定所屬外掛的指令，包括透過共用程式庫註冊的指令。"
+  ],
+  "Hidden": [
+    "ヘルプ非表示のコマンドも表示",
+    "Include commands hidden from help",
+    "In der Hilfe ausgeblendete Befehle anzeigen",
+    "Inclure les commandes masquées dans l’aide",
+    "도움말에서 숨겨진 명령어도 표시",
+    "显示帮助中隐藏的命令",
+    "顯示說明中隱藏的指令"
+  ],
+  "Info": [
+    "コマンドをクリックするとコピーします。引数は必要に応じて追加してください。説明文は各プラグインの登録内容です。",
+    "Click a command to copy it. Add arguments as needed. Descriptions come from each plugin.",
+    "Zum Kopieren einen Befehl anklicken. Argumente bei Bedarf ergänzen. Beschreibungen stammen vom jeweiligen Plugin.",
+    "Cliquez sur une commande pour la copier. Ajoutez les arguments nécessaires. Les descriptions proviennent des plugins.",
+    "명령어를 클릭하면 복사됩니다. 필요한 인수는 추가하세요. 설명은 각 플러그인이 제공한 내용입니다.",
+    "点击命令即可复制。请按需添加参数。说明由各插件提供。",
+    "點擊指令即可複製。請視需要加入參數。說明由各外掛提供。"
+  ],
+  "CacheInfo": [
+    "一覧はメモリ上に保持します。プラグイン変更時に更新し、動的なコマンド変更は「再取得」で反映できます。",
+    "The list is cached in memory and refreshed on plugin changes. Use Refresh for dynamic command changes.",
+    "Die Liste bleibt im Speicher und wird bei Plugin-Änderungen erneuert. Dynamische Befehle über Aktualisieren neu einlesen.",
+    "La liste est gardée en mémoire et actualisée lors des changements de plugins. Actualisez pour les commandes dynamiques.",
+    "목록은 메모리에 보관되며 플러그인 변경 시 갱신됩니다. 동적 명령어 변경은 새로 고침으로 반영하세요.",
+    "列表保存在内存中，插件变更时更新。动态命令变更可通过刷新获取。",
+    "清單保存在記憶體中，外掛變更時更新。動態指令變更可透過重新整理取得。"
+  ],
+  "Empty": [
+    "一致するプラグインやコマンドがありません。",
+    "No matching plugins or commands.",
+    "Keine passenden Plugins oder Befehle.",
+    "Aucun plugin ou commande correspondant.",
+    "일치하는 플러그인이나 명령어가 없습니다.",
+    "没有匹配的插件或命令。",
+    "沒有符合的外掛或指令。"
+  ],
+  "Error": [
+    "一覧を取得できませんでした。「再取得」で再試行してください。",
+    "Could not load the list. Use Refresh to retry.",
+    "Liste konnte nicht geladen werden. Bitte aktualisieren.",
+    "Impossible de charger la liste. Réessayez avec Actualiser.",
+    "목록을 가져오지 못했습니다. 새로 고침으로 다시 시도하세요.",
+    "无法加载列表。请点击刷新重试。",
+    "無法載入清單。請點擊重新整理重試。"
+  ],
+  "CommandHelp": [
+    "プラグイン別のコマンド一覧を開きます。",
+    "Open the command browser grouped by plugin.",
+    "Nach Plugin gruppierte Befehle öffnen.",
+    "Ouvrir les commandes regroupées par plugin.",
+    "플러그인별 명령어 목록을 엽니다.",
+    "打开按插件分组的命令列表。",
+    "開啟依外掛分組的指令清單。"
+  ],
+  "Previous": [
+    "前へ",
+    "Previous",
+    "Zurück",
+    "Précédent",
+    "이전",
+    "上一页",
+    "上一頁"
+  ],
+  "Next": [
+    "次へ",
+    "Next",
+    "Weiter",
+    "Suivant",
+    "다음",
+    "下一页",
+    "下一頁"
+  ]
+}
