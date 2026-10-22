@@ -1,5 +1,17 @@
 # Command Atlas publication state
 
+## 2026-10-23 — Command Atlas 1.1.0.1 public preview
+
+- Published at the user's explicit request. Release: https://github.com/Roxyz0501/CommandAtlas/releases/tag/v1.1.0.1
+- ZIP: https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.1/CommandAtlas-1.1.0.1.zip
+- Source/tag commit: `7f14b9d1ff86361039691299facacba1436a1071`.
+- ZIP SHA-256: `B6638FD8EAF8C9F6BCA45CF71883042D79357D0074BA736BFB39C928C56A6CF6`.
+- Changed-only configuration autosave every 60 seconds, lifecycle flush, three valid backup generations and corrupt-primary recovery. Translation/icon tasks are cancelled and drained before disposal; three consecutive failures stop automatic work until explicit retry.
+- Clean Release zero warnings/errors. 402 localization/catalog, 7 icon-cache, 19 feature, 30 persistence/fault/shutdown, and 5,583 isolated UI/glyph/lifecycle checks passed. Synthetic 600 edits coalesced to one 90-byte settings payload; 480 unchanged periods produced zero settings writes. Native game operation and OS/physical SSD I/O remain unverified.
+- Public repository/icon/ZIP returned HTTP 200 during release publication; downloaded ZIP matched the hash and eight allowlisted package files retained the author, version, RepoUrl, IconUrl and third-party license.
+- Shared index commit: `2f22928d100ccba0589336b56b1c61fb147275fd`. Connector verified 13 entries and Command Atlas 1.1.0.1; twelve other entries unchanged. Normal main URL initially returned stale 1.1.0.0 through CDN.
+- Source was published via GitHub connector; Release via CLI. Shared-index connector write failed twice before execution due to changing tool catalog, so CLI performed the guarded update. Earlier automatic approval review was unavailable due to usage limits; no index write occurred then. No installed DLL or production settings were replaced.
+
 ## 2026-10-14 — Command Atlas 1.1.0.0 public preview
 
 - Release: https://github.com/Roxyz0501/CommandAtlas/releases/tag/v1.1.0.0
