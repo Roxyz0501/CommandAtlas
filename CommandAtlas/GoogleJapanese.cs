@@ -15,7 +15,7 @@ internal sealed class GoogleJapanese : IDisposable
         using var registration = token.Register(client.CancelPendingRequests);
         token.ThrowIfCancellationRequested();
         var text = string.Join("\n\n", texts.Select((x, i) => $"ZXQ{i:D4}QXZ\n{x}"));
-        var result = await translator.TranslateAsync(text, "ja");
+        var result = await translator.TranslateAsync(text, "ja").ConfigureAwait(false);
         return Split(result.Translation, texts.Length);
     }
     internal static string[] Split(string translated, int count)

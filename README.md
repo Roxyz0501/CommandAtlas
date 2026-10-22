@@ -29,11 +29,11 @@ https://raw.githubusercontent.com/Roxyz0501/DalamudPluginRepo/main/repo.json
 
 プラグインインストーラーで **Command Atlas** を検索してインストールします。既にこの共通リポジトリを登録している場合は追加不要です。`/commandatlas` で開きます。
 
-[バージョン1.1.0.0のRelease](https://github.com/Roxyz0501/CommandAtlas/releases/tag/v1.1.0.0) からZIPも取得できます。ゲーム内の実機動作は未確認の公開プレビューです。
+[バージョン1.1.0.1のRelease](https://github.com/Roxyz0501/CommandAtlas/releases/tag/v1.1.0.1) からZIPも取得できます。ゲーム内の実機動作は未確認の公開プレビューです。
 
 ### 開発用に読み込む
 
-`artifacts/CommandAtlas-1.1.0.0.zip` を専用フォルダーに展開し、Dalamud開発者設定の開発用プラグインの場所へ `CommandAtlas.dll` を追加して読み込みます。ゲーム内操作・実環境の全プラグインとの互換性は未確認です。
+`artifacts/CommandAtlas-1.1.0.1.zip` を専用フォルダーに展開し、Dalamud開発者設定の開発用プラグインの場所へ `CommandAtlas.dll` を追加して読み込みます。ゲーム内操作・実環境の全プラグインとの互換性は未確認です。
 
 ## 言語
 
@@ -67,3 +67,9 @@ dotnet run --project Tests/UI/UiTests.csproj -c Release -- artifacts/ui
 ## 任意の支援
 
 開発者 Roxyz0501 への支援: [Ko-fi](https://ko-fi.com/roxyz0501)。支援の有無による機能制限はありません。
+
+## 永続化修正（1.1.0.1）
+
+設定変更は60秒ごとにまとめ、ログアウト・正常終了・無効化時に未保存分を保存します。正常な旧設定を3世代保持し、破損時は正常バックアップから復元します。3回続けて保存に失敗した場合は停止し、設定画面から再試行できます。翻訳・アイコン取得は終了時にキャンセル後の完了まで回収します。
+
+合成データによる検証・適用範囲は [PERSISTENCE_VERIFICATION.md](PERSISTENCE_VERIFICATION.md) を参照してください。1.1.0.1から適用されます。

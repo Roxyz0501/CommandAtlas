@@ -2,7 +2,7 @@
   "Author": "Roxyz0501",
   "Name": "Command Atlas",
   "InternalName": "CommandAtlas",
-  "AssemblyVersion": "1.1.0.0",
+  "AssemblyVersion": "1.1.0.1",
   "RepoUrl": "https://github.com/Roxyz0501/CommandAtlas",
   "IconUrl": "https://raw.githubusercontent.com/Roxyz0501/CommandAtlas/main/CommandAtlas/images/icon.png",
   "Punchline": "Find, run and copy commands grouped by active plugin.",

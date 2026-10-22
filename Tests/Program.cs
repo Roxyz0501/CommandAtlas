@@ -26,3 +26,5 @@ foreach (var code in Loc.Codes)
 Console.WriteLine($"Passed {checks} catalog and localization checks.");
 await CacheChecks.Run();
 await FeatureChecks.Run(args.Contains("--live-translation"));
+
+await PersistenceChecks.Run();

@@ -18,12 +18,23 @@ unsafe class Program
     static void Check(bool value, string label) { checks++; if (!value) throw new Exception(label); }
     static void Main(string[] args)
     {
-        var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output); Dummy.CacheDirectory = Path.Combine(output, "cache");
+        var output = Path.GetFullPath(args[0]); Directory.CreateDirectory(output); Dummy.CacheDirectory = Path.Combine(output, "cache-" + Guid.NewGuid().ToString("N"));
         ImGui.CreateContext(); var io = ImGui.GetIO(); io.DisplaySize = new(1440, 900); io.DeltaTime = 1f / 60; io.ConfigInputTrickleEventQueue = false;
         io.SetClipboardTextFn = (void*)(delegate* unmanaged[Cdecl]<void*, byte*, void>)&CaptureClipboard;
-        using (var plugin = new Plugin(Stub<IDalamudPluginInterface>(), Stub<ICommandManager>(), Stub<IClientState>(), Stub<ITextureProvider>(), Stub<ITextureSubstitutionProvider>(), Stub<IPluginLog>()))
+        using (var plugin = new Plugin(Stub<IDalamudPluginInterface>(), Stub<ICommandManager>(), Stub<IClientState>(), Stub<ITextureProvider>(), Stub<ITextureSubstitutionProvider>(), Stub<IPluginLog>(), Stub<IFramework>(), Stub<IGameLifecycle>()))
         {
             var type = typeof(Plugin);
+            var persistence = type.GetField("settings", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(plugin)!;
+            void Edit(Action<Configuration> edit) => persistence.GetType().GetMethod("Edit")!.Invoke(persistence, [edit]);
+            long Writes() => (long)persistence.GetType().GetProperty("Writes")!.GetValue(persistence)!;
+            Edit(c => c.Language = "ja");
+            Dummy.Events["Logout"]!.DynamicInvoke(0, 0);
+            Check(Writes() == 1, "Registered logout flushes pending settings");
+            Edit(c => c.ShowHidden = true);
+            Dummy.Shutdown.Cancel(); Dummy.Unloading.Cancel();
+            Check(Writes() == 2, "Normal shutdown and unload tokens coalesce flush");
+            Edit(c => c.ShowHidden = false);
+            Dummy.Config = (Configuration)type.GetField("config", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(plugin)!;
             object? Invoke(string method) => type.GetMethod(method, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(plugin, null);
             Invoke("Reload"); // Build fonts outside the native frame, as the host's managed atlas does.
             var visibleRows = (Array)type.GetField("filtered", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(plugin)!;
@@ -67,11 +78,11 @@ unsafe class Program
             Dummy.Config.Language = "en"; Frame(); Frame();
             Click(185, 100); // Settings tab.
             Frame(); Renderer.Render(ImGui.GetDrawData(), textures, Path.Combine(output, "settings.bmp"));
-            Check(Dummy.SaveCount == saves, "Tab navigation has no saves");
+            Check(Dummy.SaveCount == saves && Writes() == 2, "Tab navigation has no saves");
             // Filtering reads the snapshot only, without reading Dalamud again.
             type.GetField("search", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(plugin, "/example"); Invoke("Filter");
             Check(Dummy.CatalogReads == 1 && Dummy.CommandReads == 2, "Search reads snapshot only");
-            Check(Dummy.SaveCount == saves, "Search has no writes");
+            Check(Dummy.SaveCount == saves && Writes() == 2, "Search has no writes");
             var execute = type.GetMethod("Execute", BindingFlags.NonPublic | BindingFlags.Instance)!;
             Check((bool)execute.Invoke(plugin, ["ExampleTools", "/example stop"])! && Dummy.Executed == "/example stop", "Dispatches exact command with arguments");
             var count = Dummy.Executions;
@@ -79,6 +90,7 @@ unsafe class Program
             Check(!(bool)execute.Invoke(plugin, ["WrongOwner", "/example"])! && Dummy.Executions == count, "Changed command owner rejected");
         }
         Check(Dummy.Commands.Count == 1 && Dummy.Commands.ContainsKey("/example"), "Dispose removes only own command");
+        Check(Dummy.Events.Values.All(d => d == null), "All registered plugin events detached on Dispose");
         ImGui.DestroyContext(); foreach (var pin in Dummy.Pins) pin.Free();
         Console.WriteLine($"Passed {checks} glyph, production-rendering, lifecycle and access-count checks.");
     }
@@ -86,6 +98,8 @@ unsafe class Program
 
 public unsafe class Dummy : DispatchProxy
 {
+    public static Dictionary<string, Delegate?> Events = new();
+    public static CancellationTokenSource Shutdown = new(), Unloading = new();
     public static Configuration Config = new() { Language = "ja" };
     public static string CacheDirectory = "";
     public static int SaveCount, CatalogReads, CommandReads;
@@ -102,9 +116,14 @@ public unsafe class Dummy : DispatchProxy
     }
     protected override object? Invoke(MethodInfo? method, object?[]? args)
     {
-        switch (method!.Name)
+        if (method!.Name.StartsWith("add_")) { var key = method.Name[4..]; Events[key] = Delegate.Combine(Events.GetValueOrDefault(key), (Delegate)args![0]!); return null; }
+        if (method.Name.StartsWith("remove_")) { var key = method.Name[7..]; Events[key] = Delegate.Remove(Events.GetValueOrDefault(key), (Delegate)args![0]!); return null; }
+        switch (method.Name)
         {
+            case "get_GameShuttingDownToken": return Shutdown.Token;
+            case "get_DalamudUnloadingToken": return Unloading.Token;
             case "GetPluginConfig": return Config;
+            case "get_ConfigFile": return new FileInfo(Path.Combine(CacheDirectory, "CommandAtlas.json"));
             case "GetPluginConfigDirectory": return CacheDirectory;
             case "get_AssemblyLocation": return new FileInfo(typeof(Plugin).Assembly.Location);
             case "GetFromFile": return DispatchProxy.Create(method.ReturnType, typeof(Dummy));

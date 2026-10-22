@@ -412,5 +412,68 @@
     "추가 실패: 등록된 명령어, 중복, 256개 제한을 확인하세요",
     "无法添加：请检查注册命令、重复项及256项上限",
     "無法新增：請檢查註冊指令、重複項及256項上限"
+  ],
+  "ConfigSaveInfo": [
+    "設定は変更時のみ60秒ごとに保存し、ログアウト・終了時にも保存します。正常なバックアップを3世代保持します。",
+    "Changed settings save every 60 seconds and on logout or exit. Three valid backups are kept.",
+    "Geänderte Einstellungen werden alle 60 Sekunden und beim Abmelden oder Beenden gespeichert. Drei gültige Sicherungen bleiben erhalten.",
+    "Les paramètres modifiés sont enregistrés toutes les 60 secondes et à la déconnexion ou à la fermeture. Trois sauvegardes valides sont conservées.",
+    "변경된 설정은 60초마다, 로그아웃 및 종료 시 저장합니다. 정상 백업 3개를 유지합니다.",
+    "修改的设置每60秒及登出或退出时保存，保留三个有效备份。",
+    "修改的設定每60秒及登出或結束時儲存，保留三個有效備份。"
+  ],
+  "ConfigRecovered": [
+    "設定の破損を検出し、正常なバックアップから復元しました。",
+    "Damaged settings were restored from a valid backup.",
+    "Beschädigte Einstellungen wurden aus einer gültigen Sicherung wiederhergestellt.",
+    "Les paramètres endommagés ont été restaurés depuis une sauvegarde valide.",
+    "손상된 설정을 정상 백업에서 복구했습니다.",
+    "已从有效备份恢复损坏的设置。",
+    "已從有效備份還原損壞的設定。"
+  ],
+  "ConfigDamaged": [
+    "設定を読み取れません。元ファイルを退避して初期設定を使用します。",
+    "Settings could not be read. The original file is preserved; defaults are used.",
+    "Einstellungen konnten nicht gelesen werden. Die Originaldatei bleibt erhalten; Standardwerte werden verwendet.",
+    "Les paramètres sont illisibles. Le fichier original est conservé ; les valeurs par défaut sont utilisées.",
+    "설정을 읽을 수 없습니다. 원본을 보존하고 기본값을 사용합니다.",
+    "无法读取设置。保留原始文件并使用默认值。",
+    "無法讀取設定。保留原始檔案並使用預設值。"
+  ],
+  "ConfigSaveFailed": [
+    "設定を保存できません。保存先の空き容量・アクセス権を確認してください。変更はメモリに保持しています。",
+    "Settings could not be saved. Check storage space and permissions. Changes remain in memory.",
+    "Einstellungen konnten nicht gespeichert werden. Speicherplatz und Zugriffsrechte prüfen. Änderungen bleiben im Speicher.",
+    "Impossible de sauvegarder. Vérifiez l’espace disque et les autorisations. Les modifications restent en mémoire.",
+    "설정을 저장하지 못했습니다. 공간과 권한을 확인하세요. 변경 사항은 메모리에 유지됩니다.",
+    "无法保存设置。请检查空间和权限。更改保留在内存中。",
+    "無法儲存設定。請檢查空間和權限。變更保留在記憶體中。"
+  ],
+  "ConfigSaveStopped": [
+    "保存が3回失敗したため自動保存を停止しました。原因を解消して「保存を再試行」を押してください。",
+    "Autosave stopped after three failures. Fix storage access and click Retry save.",
+    "Automatisches Speichern nach drei Fehlern gestoppt. Zugriff prüfen und Speichern wiederholen.",
+    "Sauvegarde automatique arrêtée après trois échecs. Corrigez l’accès puis réessayez.",
+    "3회 실패하여 자동 저장을 중지했습니다. 원인을 해결하고 저장 재시도를 누르세요.",
+    "保存失败三次后已停止自动保存。修复访问问题后重试。",
+    "儲存失敗三次後已停止自動儲存。修復存取問題後重試。"
+  ],
+  "RetrySave": [
+    "保存を再試行",
+    "Retry save",
+    "Speichern wiederholen",
+    "Réessayer la sauvegarde",
+    "저장 재시도",
+    "重试保存",
+    "重試儲存"
+  ],
+  "CacheStopped": [
+    "取得または保存が3回失敗したため停止しました。通信・保存先を確認し「再取得」で再試行できます。",
+    "Stopped after three fetch or save failures. Check connectivity and storage, then click Refresh to retry.",
+    "Nach drei Abruf- oder Speicherfehlern gestoppt. Verbindung und Speicher prüfen, dann Aktualisieren wählen.",
+    "Arrêt après trois échecs de récupération ou de sauvegarde. Vérifiez le réseau et le stockage puis actualisez.",
+    "가져오기 또는 저장이 3회 실패하여 중지했습니다. 연결과 저장소를 확인하고 새로고침하세요.",
+    "获取或保存失败三次后已停止。请检查网络和存储，然后刷新重试。",
+    "取得或儲存失敗三次後已停止。請檢查網路和儲存，然後重新整理。"
   ]
 }

@@ -17,6 +17,11 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ITextureSubstitutionProvider textureUpdates;
     private readonly IPluginLog log;
     private readonly Configuration config;
+    private readonly ConfigurationStore settings;
+    private readonly IFramework framework;
+    private readonly IClientState client;
+    private readonly CancellationTokenRegistration shutdown, unloading;
+    private bool disposed;
     private LocalizedFonts fonts;
     private string fontText = "";
     private readonly IconCache icons;
@@ -37,16 +42,18 @@ public sealed class Plugin : IDalamudPlugin
     private int page;
     private const int PageSize = 20;
 
-    public Plugin(IDalamudPluginInterface pi, ICommandManager commands, IClientState client, ITextureProvider textures, ITextureSubstitutionProvider textureUpdates, IPluginLog log)
+    public Plugin(IDalamudPluginInterface pi, ICommandManager commands, IClientState client, ITextureProvider textures, ITextureSubstitutionProvider textureUpdates, IPluginLog log, IFramework framework, IGameLifecycle lifecycle)
     {
         this.pi = pi; this.commands = commands; this.textures = textures; this.log = log;
         this.textureUpdates = textureUpdates;
-        config = pi.GetPluginConfig() as Configuration ?? new Configuration();
+        this.framework = framework; this.client = client;
+        settings = new ConfigurationStore(pi.ConfigFile.FullName, (key, ex) => log.Warning(ex, "Configuration: {Status}", key));
+        config = settings.Value;
         config.Presets ??= [];
         ClientLanguage? game;
         try { game = client.ClientLanguage; } catch { game = null; }
         var language = Loc.Resolve(config.Language, game, pi.UiLanguage);
-        if (config.Language != language) { config.Language = language; pi.SavePluginConfig(config); }
+        if (config.Language != language) { settings.Edit(c => c.Language = language); }
         fonts = new LocalizedFonts(pi.UiBuilder.FontAtlas, []);
         icons = new IconCache(Path.Combine(pi.GetPluginConfigDirectory(), "icon-cache-v1"));
         google = new GoogleJapanese();
@@ -57,9 +64,15 @@ public sealed class Plugin : IDalamudPlugin
         pi.UiBuilder.Draw += Draw;
         pi.UiBuilder.OpenMainUi += Open;
         pi.UiBuilder.OpenConfigUi += Open;
+        framework.Update += Update;
+        client.Logout += Logout;
+        shutdown = lifecycle.GameShuttingDownToken.Register(settings.Flush);
+        unloading = lifecycle.DalamudUnloadingToken.Register(settings.Flush);
     }
     private string T(string key) => Loc.Get(config.Language, key);
-    private void Open() => open = true;
+    private void Open() { if (!disposed) open = true; }
+    private void Update(IFramework _) => settings.Tick();
+    private void Logout(int type, int code) => settings.Flush();
     private void PluginsChanged(IActivePluginsChangedEventArgs _) => dirty = true;
     private void Filter() { filtered = Catalog.Filter(rows, search, config.ShowHidden, config.JapaneseDescriptions ? text => translations.Get(text, false) : null); page = 0; }
     private void Reload()
@@ -113,6 +126,7 @@ public sealed class Plugin : IDalamudPlugin
     }
     private void Draw()
     {
+        if (disposed) return;
         if (!open) { translations.SetActive(false); return; }
         while (icons.TryTakeChanged(out var path)) textureUpdates.InvalidatePaths([path]);
         if (dirty) Reload();
@@ -147,7 +161,8 @@ public sealed class Plugin : IDalamudPlugin
         ImGui.SetNextItemWidth(Math.Max(180, ImGui.GetContentRegionAvail().X - 120));
         if (ImGui.InputTextWithHint("###Search", T("Search"), ref search, 256)) Filter();
         ImGui.SameLine();
-        if (ImGui.Button(T("Refresh") + "###Refresh")) Reload();
+        if (ImGui.Button(T("Refresh") + "###Refresh")) { icons.Retry(); translations.Retry(); Reload(); }
+        if (icons.Stopped) ImGui.TextWrapped(T("CacheStopped"));
         ImGui.TextWrapped(T("Info"));
         DrawTranslationToggle();
         if (failed) ImGui.TextWrapped(T("Error"));
@@ -208,7 +223,7 @@ public sealed class Plugin : IDalamudPlugin
         var enabled = config.JapaneseDescriptions;
         if (ImGui.Checkbox(T("JapaneseDescriptions") + "###Translate", ref enabled))
         {
-            config.JapaneseDescriptions = enabled; pi.SavePluginConfig(config); translations.SetActive(enabled); Filter();
+            settings.Edit(c => c.JapaneseDescriptions = enabled); translations.SetActive(enabled); Filter();
         }
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(T("TranslationInfo"));
         if (enabled) { ImGui.SameLine(); ImGui.TextDisabled(T(translations.Status)); }
@@ -238,7 +253,7 @@ public sealed class Plugin : IDalamudPlugin
         if (!validRoot || !CommandCatalog.Executable(text)) ImGui.TextWrapped(T("FillArguments"));
         if (command.PresetId != null && ImGui.SmallButton(T("Remove") + "###Remove"))
         {
-            config.Presets.RemoveAll(p => p.Id == command.PresetId); pi.SavePluginConfig(config); dirty = true;
+            settings.Edit(c => c.Presets.RemoveAll(p => p.Id == command.PresetId)); dirty = true;
         }
         ImGui.PopID();
     }
@@ -269,16 +284,18 @@ public sealed class Plugin : IDalamudPlugin
                 Feedback("InvalidPreset", text);
             else
             {
-                config.Presets.Add(new() { PluginId = plugin.Id, Command = text, Help = customHelp.Trim() });
-                pi.SavePluginConfig(config); addingTo = null; dirty = true;
+                settings.Edit(c => c.Presets.Add(new() { PluginId = plugin.Id, Command = text, Help = customHelp.Trim() })); addingTo = null; dirty = true;
             }
         }
         ImGui.SameLine(); if (ImGui.Button(T("Cancel") + "###Cancel")) addingTo = null;
     }
     private void DrawSettings()
     {
+        ImGui.TextWrapped(T("ConfigSaveInfo"));
+        if (settings.Notice.Length > 0) ImGui.TextWrapped(T(settings.Notice));
+        if (settings.Pending && ImGui.Button(T("RetrySave") + "###RetrySave")) settings.Retry();
         var hidden = config.ShowHidden;
-        if (ImGui.Checkbox(T("Hidden") + "###Hidden", ref hidden)) { config.ShowHidden = hidden; pi.SavePluginConfig(config); Filter(); }
+        if (ImGui.Checkbox(T("Hidden") + "###Hidden", ref hidden)) { settings.Edit(c => c.ShowHidden = hidden); Filter(); }
         ImGui.TextWrapped(T("CacheInfo"));
         ImGui.TextWrapped(T("TranslationInfo"));
         ImGui.TextWrapped(T("SubcommandInfo"));
@@ -288,15 +305,19 @@ public sealed class Plugin : IDalamudPlugin
         var selected = StandardPluginTabs.DrawLanguageSelector(T("Language"), T("LanguageHelp"), config.Language!);
         if (selected != null && selected != config.Language)
         {
-            config.Language = selected; pi.SavePluginConfig(config); entry.HelpMessage = T("CommandHelp");
+            settings.Edit(c => c.Language = selected); entry.HelpMessage = T("CommandHelp");
             rows = rows.Select(p => p.Id.Length == 0 ? p with { Name = T("Other"), Description = T("OtherHelp") }
                 : p.Id == "CommandAtlas" ? p with { Commands = p.Commands.Select(c => c.Command == "/commandatlas" ? c with { Help = entry.HelpMessage } : c).ToArray() } : p).ToArray(); Filter();
         }
     }
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true; open = false; requestedExecution = null;
+        framework.Update -= Update; client.Logout -= Logout;
+        shutdown.Dispose(); unloading.Dispose();
         pi.ActivePluginsChanged -= PluginsChanged; pi.UiBuilder.Draw -= Draw;
         pi.UiBuilder.OpenMainUi -= Open; pi.UiBuilder.OpenConfigUi -= Open;
-        commands.RemoveHandler("/commandatlas"); translations.Dispose(); google.Dispose(); icons.Dispose(); fonts.Dispose();
+        commands.RemoveHandler("/commandatlas"); settings.Dispose(); translations.Dispose(); google.Dispose(); icons.Dispose(); fonts.Dispose();
     }
 }

@@ -6,13 +6,13 @@
   "Description": "Browse active plugins and command help; execute or copy commands, add subcommands and optionally translate descriptions into Japanese.",
   "Punchline": "Find, run and copy commands by plugin.",
   "Tags": ["commands", "clipboard", "utility", "search"],
-  "AssemblyVersion": "1.1.0.0",
+  "AssemblyVersion": "1.1.0.1",
   "DalamudApiLevel": 15,
   "RepoUrl": "https://github.com/Roxyz0501/CommandAtlas",
   "IconUrl": "https://raw.githubusercontent.com/Roxyz0501/CommandAtlas/main/CommandAtlas/images/icon.png",
-  "DownloadLinkInstall": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.0/CommandAtlas-1.1.0.0.zip",
-  "DownloadLinkUpdate": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.0/CommandAtlas-1.1.0.0.zip",
-  "DownloadLinkTesting": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.0/CommandAtlas-1.1.0.0.zip",
+  "DownloadLinkInstall": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.1/CommandAtlas-1.1.0.1.zip",
+  "DownloadLinkUpdate": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.1/CommandAtlas-1.1.0.1.zip",
+  "DownloadLinkTesting": "https://github.com/Roxyz0501/CommandAtlas/releases/download/v1.1.0.1/CommandAtlas-1.1.0.1.zip",
   "Dependencies": ["GTranslate 2.4.0 (bundled, MIT)"],
   "SharedRepository": "https://raw.githubusercontent.com/Roxyz0501/DalamudPluginRepo/main/repo.json"
 }

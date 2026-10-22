@@ -17,8 +17,12 @@ internal sealed class IconCache : IDisposable
     private readonly CancellationTokenSource stop = new();
     private readonly ConcurrentDictionary<string, Entry> entries = new();
     private int active;
+    private readonly object gate = new(), disposeGate = new();
+    private Task? worker;
+    private bool disposed;
+    public bool Stopped => entries.Values.Any(e => e.Failures >= 3);
     internal sealed record Metadata(string? ETag, DateTime Checked);
-    private sealed class Entry { public string? Path; public int Busy; public DateTime Retry; }
+    private sealed class Entry { public string? Path; public int Busy; public int Failures; public DateTime Retry; }
 
     public IconCache(string directory, HttpMessageHandler? handler = null)
     {
@@ -39,21 +43,26 @@ internal sealed class IconCache : IDisposable
     internal bool IsIdle => Volatile.Read(ref active) == 0;
     public string? Get(string url)
     {
+        lock (gate)
+        {
+        if (disposed) return null;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != "https" || uri.UserInfo.Length > 0) return null;
         if (!entries.TryGetValue(url, out var entry))
         {
             if (entries.Count >= Limit) return null;
             entry = entries.GetOrAdd(url, _ => new Entry());
         }
-        if (entry.Retry <= DateTime.UtcNow && Interlocked.CompareExchange(ref entry.Busy, 1, 0) == 0)
+        if (entry.Failures < 3 && entry.Retry <= DateTime.UtcNow && Interlocked.CompareExchange(ref entry.Busy, 1, 0) == 0)
         {
-            if (Interlocked.Increment(ref active) <= 1) _ = Fetch(uri, entry);
+            if (Interlocked.Increment(ref active) <= 1) worker = Task.Run(() => Fetch(uri, entry));
             else { Interlocked.Decrement(ref active); Volatile.Write(ref entry.Busy, 0); }
         }
         return Volatile.Read(ref entry.Path);
+        }
     }
     private async Task Fetch(Uri uri, Entry entry)
     {
+        var success = false;
         try
         {
             var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(uri.AbsoluteUri)));
@@ -64,15 +73,15 @@ internal sealed class IconCache : IDisposable
                 entry.Path = path;
                 if (File.Exists(path + ".json"))
                     try { meta = JsonSerializer.Deserialize<Metadata>(await File.ReadAllTextAsync(path + ".json", stop.Token)); } catch (JsonException) { }
-                if (meta != null && meta.Checked.AddDays(7) > DateTime.UtcNow) { entry.Retry = meta.Checked.AddDays(7); return; }
+                if (meta != null && meta.Checked.AddDays(7) > DateTime.UtcNow) { entry.Retry = meta.Checked.AddDays(7); success = true; return; }
             }
             using var request = new HttpRequestMessage(HttpMethod.Get, uri);
             if (meta?.ETag != null) request.Headers.TryAddWithoutValidation("If-None-Match", meta.ETag);
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, stop.Token);
             if (response.StatusCode == HttpStatusCode.NotModified && entry.Path != null)
             {
-                await File.WriteAllTextAsync(path + ".json", JsonSerializer.Serialize(new Metadata(meta?.ETag, DateTime.UtcNow)), stop.Token);
-                entry.Retry = DateTime.UtcNow.AddDays(7); return;
+                await Save(path + ".json", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new Metadata(meta?.ETag, DateTime.UtcNow))));
+                entry.Retry = DateTime.UtcNow.AddDays(7); success = true; return;
             }
             // Expired/deleted/unauthorized resources do not retain a stale image.
             entry.Path = null;
@@ -95,17 +104,36 @@ internal sealed class IconCache : IDisposable
             Directory.CreateDirectory(directory);
             // Keep disk capacity bounded too, including cache entries from previous sessions.
             if (!File.Exists(path) && Directory.EnumerateFiles(directory, "*.png").Count() >= Limit) return;
-            await File.WriteAllBytesAsync(path, bytes, stop.Token);
-            await File.WriteAllTextAsync(path + ".json", JsonSerializer.Serialize(new Metadata(response.Headers.ETag?.ToString(), DateTime.UtcNow)), stop.Token);
+            stop.Token.ThrowIfCancellationRequested();
+            // Finish accepted writes, without leaving a partial PNG or obsolete ETag.
+            File.Delete(path + ".json");
+            await Save(path, bytes);
+            await Save(path + ".json", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new Metadata(response.Headers.ETag?.ToString(), DateTime.UtcNow))));
             changed.Enqueue(path);
-            entry.Path = path; entry.Retry = DateTime.UtcNow.AddDays(7);
+            entry.Path = path; entry.Retry = DateTime.UtcNow.AddDays(7); success = true;
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or OperationCanceledException) { entry.Path = null; }
         finally
         {
+            if (success) entry.Failures = 0; else if (!stop.IsCancellationRequested) entry.Failures++;
             if (entry.Retry <= DateTime.UtcNow) entry.Retry = DateTime.UtcNow.AddMinutes(10);
             Interlocked.Decrement(ref active); Volatile.Write(ref entry.Busy, 0);
         }
     }
-    public void Dispose() { stop.Cancel(); client.Dispose(); }
+    private static async Task Save(string path, byte[] bytes)
+    {
+        try { await File.WriteAllBytesAsync(path + ".tmp", bytes).ConfigureAwait(false); File.Move(path + ".tmp", path, true); }
+        finally { try { File.Delete(path + ".tmp"); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
+    }
+    public void Retry() { lock (gate) { if (disposed) return; foreach (var e in entries.Values) { e.Failures = 0; if (e.Retry < DateTime.UtcNow.AddDays(1)) e.Retry = default; } } }
+    public void Dispose()
+    {
+        lock (disposeGate)
+        {
+            Task? running;
+            lock (gate) { if (disposed) return; disposed = true; stop.Cancel(); running = worker; }
+            running?.GetAwaiter().GetResult();
+            changed.Clear(); client.Dispose(); stop.Dispose();
+        }
+    }
 }

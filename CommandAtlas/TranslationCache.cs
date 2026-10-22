@@ -8,6 +8,8 @@ internal sealed class TranslationCache : IDisposable
 {
     internal sealed record Entry(string Text, DateTime Expires);
     private readonly object gate = new();
+    private readonly object disposeGate = new();
+    private int failures;
     private readonly Dictionary<string, Entry> cache = [];
     private readonly Dictionary<string, string> queued = [];
     private readonly HashSet<string> pending = [];
@@ -42,7 +44,7 @@ internal sealed class TranslationCache : IDisposable
             if (disposed || active == value) return;
             active = value;
             if (!value) { queued.Clear(); cancellation.Cancel(); }
-            else { cancellation.Dispose(); cancellation = new(); }
+
         }
     }
     public void BeginFrame() { lock (gate) queued.Clear(); }
@@ -62,7 +64,8 @@ internal sealed class TranslationCache : IDisposable
     {
         lock (gate)
         {
-            if (!active || disposed || !IsIdle || next > DateTime.UtcNow || queued.Count == 0) return;
+            if (!active || disposed || failures >= 3 || !IsIdle || next > DateTime.UtcNow || queued.Count == 0) return;
+            cancellation.Dispose(); cancellation = new();
             var selected = new List<KeyValuePair<string, string>>(); int length = 0;
             foreach (var item in queued)
             {
@@ -76,7 +79,7 @@ internal sealed class TranslationCache : IDisposable
             {
                 try
                 {
-                    var translated = await translate(selected.Select(x => x.Value).ToArray(), token);
+                    var translated = await translate(selected.Select(x => x.Value).ToArray(), token).ConfigureAwait(false);
                     token.ThrowIfCancellationRequested();
                     if (translated.Length != selected.Count || translated.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 4000)) throw new InvalidDataException("Invalid translation batch");
                     string json;
@@ -86,16 +89,18 @@ internal sealed class TranslationCache : IDisposable
                         Trim(); revision++; Status = "TranslationReady"; next = DateTime.UtcNow.AddSeconds(2);
                         json = JsonSerializer.Serialize(cache);
                     }
+                    // Once accepted, finish the bounded atomic cache save even if the UI closes.
                     try
                     {
                         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-                        await File.WriteAllTextAsync(path + ".tmp", json, token);
+                        await File.WriteAllTextAsync(path + ".tmp", json).ConfigureAwait(false);
                         File.Move(path + ".tmp", path, true);
+                        lock (gate) failures = 0;
                     }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* In-memory translations still work. */ }
+                    finally { try { File.Delete(path + ".tmp"); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
                 }
                 catch (OperationCanceledException) { lock (gate) Status = "TranslationReady"; }
-                catch (Exception) { lock (gate) { next = DateTime.UtcNow.AddMinutes(5); Status = "TranslationFailed"; queued.Clear(); } }
+                catch (Exception) { lock (gate) { next = DateTime.UtcNow.AddMinutes(5); failures++; Status = failures >= 3 ? "CacheStopped" : "TranslationFailed"; queued.Clear(); } }
                 finally { lock (gate) foreach (var item in selected) pending.Remove(item.Key); }
             });
         }
@@ -110,5 +115,16 @@ internal sealed class TranslationCache : IDisposable
             cache.Remove(item.Key); size -= item.Value.Text.Length;
         }
     }
-    public void Dispose() { lock (gate) { disposed = true; active = false; queued.Clear(); cancellation.Cancel(); } }
+    public void Retry() { lock (gate) { if (disposed) return; failures = 0; next = default; Status = "TranslationReady"; } }
+    public void Dispose()
+    {
+        lock (disposeGate)
+        {
+            Task? running;
+            lock (gate) { if (disposed) return; disposed = true; active = false; queued.Clear(); cancellation.Cancel(); running = worker; }
+            // Worker starts on the pool and never dispatches onto the UI thread.
+            running?.GetAwaiter().GetResult();
+            cancellation.Dispose();
+        }
+    }
 }
