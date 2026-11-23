@@ -17,6 +17,9 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ITextureSubstitutionProvider textureUpdates;
     private readonly IPluginLog log;
     private readonly Configuration config;
+    // Catalogued plugins are content, not dependencies. GTranslate is a bundled library.
+    private static readonly PluginDependency[] Dependencies = [];
+    private readonly StandardPluginInfo info = new(Dependencies);
     private readonly ConfigurationStore settings;
     private readonly IFramework framework;
     private readonly IClientState client;
@@ -147,7 +150,8 @@ public sealed class Plugin : IDalamudPlugin
             {
                 if (ImGui.BeginTabItem(T("Commands") + "###Commands")) { catalogVisible = true; translations.SetActive(config.JapaneseDescriptions); DrawCatalog(); ImGui.EndTabItem(); }
                 StandardPluginTabs.DrawStandardTrailingTabs(T("Settings"), "Settings", DrawSettings, T("Language"), DrawLanguage,
-                    T("Support"), () => StandardPluginTabs.DrawSupportContent(T("SupportHeading"), T("SupportBody"), T("Recipient"), T("SupportButton")));
+                    T("Support"), () => StandardPluginTabs.DrawSupportContent(T("SupportHeading"), T("SupportBody"), T("Recipient"), T("SupportButton")),
+                    StandardPluginInfo.Title(config.Language!), Dependencies.Length == 0 ? null : () => info.Draw(pi, config.Language!));
                 ImGui.EndTabBar();
             }
         }

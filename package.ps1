@@ -5,7 +5,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
 $build = Join-Path $PSScriptRoot 'CommandAtlas/bin/Release'
 $artifacts = Join-Path $PSScriptRoot 'artifacts'
 New-Item -ItemType Directory -Path $artifacts -Force | Out-Null
-$target = Join-Path $artifacts 'CommandAtlas-1.1.0.1.zip'
+$target = Join-Path $artifacts 'CommandAtlas-1.1.0.2.zip'
 Add-Type -AssemblyName System.IO.Compression
 $stream = [System.IO.File]::Open($target, [System.IO.FileMode]::Create)
 $zip = [System.IO.Compression.ZipArchive]::new($stream, [System.IO.Compression.ZipArchiveMode]::Create)
